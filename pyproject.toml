@@ -1,17 +1,22 @@
-[tool.poetry]
-name = "gts"
-version = "0.1.0"
-description = "Description"
-authors = ["AntonJorg <anton2410@gmail.com>"]
-license = "MIT"
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.2.1"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gts"
+version = "0.0.1"
+authors = [
+  { name="Anton Thestrup Jørgensen", email="anton2410@gmail.com" },
+]
+description = "A generalised framework for implementing adversarial search agents."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/antonjorg/general-tree-search"
+"Bug Tracker" = "https://github.com/AntonJorg/general-tree-search/issues"
