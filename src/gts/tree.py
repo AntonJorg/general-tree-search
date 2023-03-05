@@ -78,3 +78,4 @@ class TreeSearchNode:
         node = TreeSearchNode(self.state, self.parent, self.generating_action)
         node.__dict__ = self.__dict__.copy()
         return node
+

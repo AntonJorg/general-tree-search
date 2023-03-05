@@ -16,13 +16,14 @@ class TreeSearchAgent(ABC, *components):
 
     def __init__(self):
         self.root = None
-        self.frontier = deque()
+        self.frontier: deque[TreeSearchNode] = deque()
 
-        self.start_time = None
-        self.search_time = None
+        self.start_time: int | None = None
+        self.search_time: float | None = None
 
         self.depth = None
 
+        # Additional info for calls to self.search
         self.search_info = defaultdict(float)
 
     def search(self, state: GameState):
@@ -145,3 +146,4 @@ class TreeSearchAgent(ABC, *components):
         return the action that the agent should take.
         """
         pass
+
