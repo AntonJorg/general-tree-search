@@ -1,6 +1,6 @@
-class Reflect:
+class Trim:
     """
-    Defines methods for implementing TreeSearchAgent.reflect.
+    Defines methods for implementing TreeSearchAgent.trim.
 
     These methods should:
         - Take no arguments

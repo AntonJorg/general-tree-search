@@ -3,8 +3,9 @@ from gts.agents.mcts_agents import *
 from gts.agents.minimax_agents import *
 from gts.agents.random_agents import *
 from gts.agents.treesearch_agent import TreeSearchAgent
+import gts.agents.components
 
-agents = (
+predefined = (
     IterativeDeepeningAgent,
     IterativeDeepeningAlphaBetaAgent,
     IterativeDeepeningSimulationAgent,

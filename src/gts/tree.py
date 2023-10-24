@@ -1,9 +1,12 @@
 from __future__ import annotations
+from typing import Generic, TypeVar
 
 from gts.games import GameState
 
 
-class TreeSearchNode:
+T = TypeVar('T')
+
+class TreeSearchNode(Generic[T]):
     """
     Generic doubly linked tree data structure.
 
@@ -14,15 +17,14 @@ class TreeSearchNode:
 
     def __init__(
         self,
-        state: GameState,
-        parent: "TreeSearchNode" | None,
-        generating_action: int | None,
+        state: GameState[T],
+        parent: "TreeSearchNode[T]" | None,
+        generating_action: T | None,
         depth: int = 0,
         alpha=None,
         beta=None,
     ):
         # TODO: Move alg. specific parameters e.g. alpha and beta
-        # TODO: Fix generating_action typing
 
         # data structure
         self.parent = parent
@@ -56,7 +58,7 @@ class TreeSearchNode:
             for c in self.children:
                 c.print_tree(max_depth, depth + 1)
 
-    def add_child(self, state: GameState, generating_action: int) -> "TreeSearchNode":
+    def add_child(self, state: GameState[T], generating_action: T) -> "TreeSearchNode":
         """
         Generates a new TreeSearchNode and adds it to self.children.
         """
