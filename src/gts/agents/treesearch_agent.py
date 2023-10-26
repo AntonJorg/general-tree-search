@@ -55,10 +55,21 @@ BackpropagateType = (
         None
     ]
 )
-ShouldTrimType = Callable[["TreeSearchAgent"], bool]
-TrimType = Callable[["TreeSearchAgent"], None]
 
-GetBestMoveType = Callable[["TreeSearchAgent"], T]
+ShouldTrimType = Callable[
+    ["TreeSearchAgent"],
+    bool
+]
+
+TrimType = Callable[
+    ["TreeSearchAgent"],
+    None
+]
+
+GetBestMoveType = Callable[
+    ["TreeSearchAgent"],
+    T
+]
 
 
 @dataclass

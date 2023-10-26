@@ -33,6 +33,10 @@ def expand_next(agent: TreeSearchAgent, node: TreeSearchNode, dfs: bool = False)
     return leaf
 
 
+def expand_next_dfs(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
+    return expand_next(agent, node, dfs=True)
+
+
 def expand_next_depth_limited(
     agent: TreeSearchAgent, node: TreeSearchNode, dfs: bool = False
 ) -> TreeSearchNode:

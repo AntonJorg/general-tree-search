@@ -2,6 +2,7 @@
 This module defines component functions for use in TreeSearchAgent.
 """
 
+import gts.agents.components.generic as generic
 import gts.agents.components.control as control
 import gts.agents.components._select as select
 import gts.agents.components.expand as expand
@@ -11,6 +12,7 @@ import gts.agents.components.trim as trim
 import gts.agents.components.get_best_move as get_best_move
 
 __all__ = [
+    "generic",
     "control",
     "select",
     "expand",
