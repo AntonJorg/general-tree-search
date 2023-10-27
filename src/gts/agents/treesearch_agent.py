@@ -6,6 +6,7 @@ from dataclasses import dataclass, fields, asdict
 from gts.games import GameState
 from gts.tree import TreeSearchNode
 
+from gts.components.generic import never, no_op
 
 T = TypeVar('T')
 
@@ -153,6 +154,11 @@ class AgentBuilder:
 
     def all_defined(self):
         return all(v is not None for _, v in asdict(self).items())
+
+    def no_trim(self):
+        self.should_trim = never
+        self.trim = no_op
+        return self
 
 
 class TreeSearchAgent:

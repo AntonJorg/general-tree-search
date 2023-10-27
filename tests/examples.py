@@ -1,6 +1,6 @@
 from gts.agents.treesearch_agent import AgentBuilder
 from gts.games.dummy import DummyState
-from gts.agents.components import *
+from gts.components import *
 
 
 if __name__ == "__main__":
@@ -15,8 +15,7 @@ if __name__ == "__main__":
             .with_should_backpropagate(control.if_depth_reached)
             .with_backpropagate(backpropagate.backpropagate_minimax)
             .with_should_trim(generic.never)
-            .with_trim(generic.no_op)
-            .with_get_best_move(get_best_move.get_minimax_move)
+            .no_trim()
             .build(name="MiniMax")
     )
 

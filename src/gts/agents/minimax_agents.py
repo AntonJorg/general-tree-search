@@ -1,5 +1,22 @@
 from gts.agents.treesearch_agent import TreeSearchAgent
 
+from gts.agents.treesearch_agent import AgentBuilder
+from gts.agents.components import *
+
+
+minimax_agent = (
+    AgentBuilder()
+        .with_should_terminate(control.when_fully_evaluated)
+        .with_select(select.queue_select)
+        .with_expand(expand.expand_all_depth_limited)
+        .with_should_evaluate(control.if_depth_reached)
+        .with_evaluate(evaluate.static_evaluation)
+        .with_should_backpropagate(control.if_depth_reached)
+        .with_backpropagate(backpropagate.backpropagate_minimax)
+        .with_get_best_move(get_best_move.get_minimax_move)
+        .no_trim()
+        .build(name="MiniMax")
+)
 
 class MiniMaxAgent(TreeSearchAgent):
     """
