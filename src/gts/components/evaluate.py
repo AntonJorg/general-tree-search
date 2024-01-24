@@ -9,33 +9,37 @@ These methods should:
 """
 import random
 from math import ceil, exp
-from typing import reveal_type
-from gts.agents.treesearch_agent import TreeSearchAgent
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gts.agents.treesearch_agent import TreeSearchAgent
 
 # TODO: Remove dependency on specific games via GGP heuristics
 from gts.games import *
 
 
-def evaluate_utility(agent: TreeSearchAgent, state: GameState):
+def evaluate_utility(agent: "TreeSearchAgent", state: GameState):
     if state.is_terminal:
         return state.utility
     else:
         return None
 
 
-def simulate(agent: TreeSearchAgent, state: GameState):
+def simulate(agent: "TreeSearchAgent", state: GameState):
     while not state.is_terminal:
         action = random.choice(state.applicable_actions)
         state = state.result(action)
     return state.utility
 
 
-def simulate_many(agent: TreeSearchAgent, state: GameState):
-    values = (simulate(agent, state) for _ in range(agent.num_simulations))
-    return sum(values) / agent.num_simulations
+def simulate_many(agent: "TreeSearchAgent", state: GameState):
+    n = agent.params["num_simulations"]
+    values = (simulate(agent, state) for _ in range(n))
+    return sum(values) / n
 
 
-def simulate_stochastic_environment(agent: TreeSearchAgent, state: GameState):
+def simulate_stochastic_environment(agent: "TreeSearchAgent", state: GameState):
     while not state.is_terminal:
         if hasattr(state, "cumulative_distribution"):
             action = random.choices(
@@ -49,7 +53,7 @@ def simulate_stochastic_environment(agent: TreeSearchAgent, state: GameState):
     return state.utility
 
 
-def static_evaluation(agent: TreeSearchAgent, state: GameState):
+def static_evaluation(agent: "TreeSearchAgent", state: GameState):
     match state:
         case ConnectFourState():
             return _static_eval_connectfour(agent, state)
@@ -63,7 +67,7 @@ def static_evaluation(agent: TreeSearchAgent, state: GameState):
             raise ValueError(f"Unknown state type: {type(state)}")
 
 
-def _static_eval_connectfour(agent: TreeSearchAgent, state: ConnectFourState):
+def _static_eval_connectfour(agent: "TreeSearchAgent", state: ConnectFourState):
     if state.is_terminal:
         return state.utility
 
@@ -118,7 +122,7 @@ def _static_eval_connectfour(agent: TreeSearchAgent, state: ConnectFourState):
     return 1 / (1 + exp(-score))
 
 
-def _static_eval_nim(agent: TreeSearchAgent, state: NimState):
+def _static_eval_nim(agent: "TreeSearchAgent", state: NimState):
     if state.is_terminal:
         return state.utility
 
@@ -132,14 +136,15 @@ def _static_eval_nim(agent: TreeSearchAgent, state: NimState):
     return int(bool(result))
 
 
-def _static_eval_2048(agent: TreeSearchAgent, state: Twenty48State):
+def _static_eval_2048(agent: "TreeSearchAgent", state: Twenty48State):
     return state.utility
 
 
-def _static_eval_dummy(agent: TreeSearchAgent, state: DummyState):
+def _static_eval_dummy(agent: "TreeSearchAgent", state: DummyState):
+    if state.utility is None:
+        return 0.0
     return state.utility
 
 
-def evaluate_and_simulate(agent: TreeSearchAgent, state: GameState):
+def evaluate_and_simulate(agent: "TreeSearchAgent", state: GameState):
     return static_evaluation(agent, state), simulate(agent, state)
-

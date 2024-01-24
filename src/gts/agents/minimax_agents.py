@@ -1,174 +1,98 @@
 from gts.agents.treesearch_agent import TreeSearchAgent
 
 from gts.agents.treesearch_agent import AgentBuilder
-from gts.agents.components import *
+from gts.components import *
 
 
 minimax_agent = (
     AgentBuilder()
-        .with_should_terminate(control.when_fully_evaluated)
-        .with_select(select.queue_select)
-        .with_expand(expand.expand_all_depth_limited)
-        .with_should_evaluate(control.if_depth_reached)
-        .with_evaluate(evaluate.static_evaluation)
-        .with_should_backpropagate(control.if_depth_reached)
-        .with_backpropagate(backpropagate.backpropagate_minimax)
-        .with_get_best_move(get_best_move.get_minimax_move)
-        .no_trim()
-        .build(name="MiniMax")
+    .with_should_terminate(control.when_fully_evaluated)
+    .with_select(select.queue_select)
+    .with_expand(expand.expand_all_depth_limited)
+    .with_should_evaluate(control.if_depth_reached)
+    .with_evaluate(evaluate.static_evaluation)
+    .with_should_backpropagate(control.if_depth_reached)
+    .with_backpropagate(backpropagate.backpropagate_minimax)
+    .with_get_best_move(get_best_move.get_minimax_move)
+    .no_trim()
+    .build(name="MiniMax")
+)
+"""TODO"""
+
+
+_alpha_beta_builder = (
+    AgentBuilder()
+    .with_should_backpropagate(control.if_depth_reached_or_fully_expanded)
+    .with_expand(expand.expand_next_alpha_beta)
 )
 
-class MiniMaxAgent(TreeSearchAgent):
-    """
-    Classic MiniMax agent. Depth limiting is introduced immediately
-    since the alternative is almost never practical.
-    """
 
-    def __init__(self, depth=None):
-        super().__init__()
-        self.depth = depth
-
-    def __repr__(self):
-        return type(self).__name__
-
-    def select(self):
-        return self.queue_select()
-
-    def expand(self, node):
-        return self.expand_all_depth_limited(node)
-
-    def should_evaluate(self, node):
-        return self.if_depth_reached(node)
-
-    def evaluate(self, state):
-        return self.static_evaluation(state)
-
-    def should_backpropagate(self, node, value):
-        return self.if_depth_reached(node, value)
-
-    def backpropagate(self, node, value):
-        self.backpropagate_minimax(node, value)
-
-    def should_trim(self):
-        pass
-
-    def trim(self):
-        pass
-
-    def get_best_move(self):
-        return self.get_minimax_move()
-
-    def should_terminate(self):
-        return self.when_fully_evaluated()
+alpha_beta_agent = (
+    minimax_agent.to_builder().merge(_alpha_beta_builder).build(name="AlphaBeta")
+)
+"""TODO"""
 
 
-class AlphaBetaAgent(MiniMaxAgent):
-    """
-    Adds alpha beta pruning to MiniMax.
-    """
-
-    def should_backpropagate(self, node, value):
-        return self.if_depth_reached_or_fully_expanded(node, value)
-
-    def expand(self, node):
-        return self.expand_next_alpha_beta(node)
+_iterative_deepening_builder = (
+    AgentBuilder()
+    .with_should_terminate(control.timed_termination)
+    .with_should_trim(control.when_fully_evaluated)
+    .with_trim(trim.reset_tree_increment_depth)
+    .with_get_best_move(get_best_move.get_stored_best_move)
+    .add_params(depth=1, best_move=None)
+)
 
 
-class IterativeDeepeningAgent(MiniMaxAgent):
-    """
-    Adds iterative deepening to MiniMax.
-    """
-
-    def __init__(self, search_time):
-        super().__init__(depth=1)
-        self.search_time = search_time
-        self.best_move = None
-        self.last_iter_root = None
-
-    def __repr__(self):
-        return type(self).__name__ + f"+st={self.search_time}"
-
-    def search(self, state):
-        self.depth = 1
-        self.best_move = None
-        return super().search(state)
-
-    def should_terminate(self):
-        return self.timed_termination()
-
-    def should_trim(self):
-        return self.when_fully_evaluated()
-
-    def trim(self):
-        return self.reset_tree_increment_depth()
-
-    def get_best_move(self):
-        return self.get_stored_best_move()
+iterative_deepening_agent = (
+    minimax_agent.to_builder()
+    .merge(_iterative_deepening_builder)
+    .build("IterativeDeepening")
+)
+"""Adds iterative deepening to MiniMax."""
 
 
-class IterativeDeepeningAlphaBetaAgent(IterativeDeepeningAgent, AlphaBetaAgent):
-    """
-    Combines iterative deepening and alpha beta pruning.
-    """
-
-    pass
-
-
-class IterativeDeepeningSimulationAgent(IterativeDeepeningAgent):
-    """
-    Replaces the static evaluation function with an average of
-    a fixed number of simulations.
-    """
-
-    def __init__(self, search_time, num_simulations=62):
-        super().__init__(search_time)
-        self.num_simulations = int(num_simulations)
-
-    def __repr__(self):
-        return super().__repr__() + f"+ns={self.num_simulations}"
-
-    def evaluate(self, state):
-        return self.simulate_many(state)
+iterative_deepening_alpha_beta_agent = (
+    iterative_deepening_agent.to_builder()
+    .merge(_alpha_beta_builder)
+    .build("IterativeDeepeningAlphaBeta")
+)
+"""Combines iterative deepening and alpha beta pruning."""
 
 
-class BeamSearchAgent(IterativeDeepeningAlphaBetaAgent):
-    """
-    Adds the ability to filter each nodes unexpanded action list
-    to avoid expanding known bad moves. Needs to be implemented
-    for every game the agent should run on.
-    """
+iterative_deepening_simulation_agent = (
+    iterative_deepening_agent.to_builder()
+    .with_evaluate(evaluate.simulate_many)
+    .add_params(num_simulations=10)
+    .build("IterativeDeepeningSimulation")
+)
+"""TODO"""
 
-    def expand(self, node):
-        return self.expand_next_beam(node)
+beam_search_agent = (
+    iterative_deepening_alpha_beta_agent.to_builder()
+    .with_expand(expand.expand_next_beam)
+    .build("BeamSearch")
+)
+"""TODO"""
 
 
-class BestFirstMiniMaxAgent(MiniMaxAgent):
-    """
-    Expands all children of the node at the end of the principal variation,
-    then backs up new minimax values.
+_best_first_minimax_builder = (
+    AgentBuilder()
+    .with_select(select.principal_variation_select)
+    .with_expand(expand.expand_next)
+    .with_should_evaluate(generic.always)
+    .with_should_backpropagate(generic.always)
+    .with_should_terminate(control.timed_termination)
+)
 
-    Richard E Korf and David Maxwell Chickering in Artificial Intelligence:
-    Best-first minimax search. 1996, pp. 299–337.
-    """
+best_first_minimax_agent = (
+    minimax_agent.to_builder()
+    .merge(_best_first_minimax_builder)
+    .build("BestFirstMiniMax")
+)
+"""
+Expands all children of the node at the end of the principal variation,
+then backs up new minimax values.
 
-    def __init__(self, search_time):
-        super().__init__(self)
-        self.search_time = search_time
-
-    def __repr__(self):
-        return type(self).__name__ + f"+st={self.search_time}"
-
-    def select(self):
-        return self.principal_variation_select()
-
-    def expand(self, node):
-        return self.expand_next(node)
-
-    def should_evaluate(self, node):
-        return True
-
-    def should_backpropagate(self, node, value):
-        return True
-
-    def should_terminate(self):
-        return self.timed_termination()
+Richard E Korf and David Maxwell Chickering in Artificial Intelligence:
+Best-first minimax search. 1996, pp. 299–337.
+"""

@@ -1,3 +1,9 @@
+# Project specific
+/games/
+/logs/
+/src/gts/java/
+*.class
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -9,11 +9,14 @@ These methods should:
 from math import log, sqrt
 from random import choice
 
-from gts.agents import TreeSearchAgent
 from gts.tree import TreeSearchNode
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gts.agents import TreeSearchAgent
 
-def uct_select(agent: TreeSearchAgent, node: TreeSearchNode | None = None) -> TreeSearchNode:
+
+def uct_select(agent: "TreeSearchAgent", node: TreeSearchNode | None = None) -> TreeSearchNode:
     if node is None:
         node = agent.root
         assert node is not None
@@ -37,7 +40,7 @@ def uct_select(agent: TreeSearchAgent, node: TreeSearchNode | None = None) -> Tr
 
 
 def partial_expansion_uct_select(
-    agent: TreeSearchAgent, node: TreeSearchNode | None = None
+    agent: "TreeSearchAgent", node: TreeSearchNode | None = None
 ) -> TreeSearchNode:
     if node is None:
         node = agent.root
@@ -68,7 +71,7 @@ def partial_expansion_uct_select(
         return partial_expansion_uct_select(agent, best_child)
 
 
-def weighted_uct_select(agent: TreeSearchAgent, node: TreeSearchNode | None = None) -> TreeSearchNode:
+def weighted_uct_select(agent: "TreeSearchAgent", node: TreeSearchNode | None = None) -> TreeSearchNode:
     if node is None:
         node = agent.root
     assert node is not None
@@ -95,12 +98,14 @@ def weighted_uct_select(agent: TreeSearchAgent, node: TreeSearchNode | None = No
     return weighted_uct_select(agent, best_child)
 
 
-def uct_select_stochastic_environment(self, node):
+def uct_select_stochastic_environment(agent: "TreeSearchAgent", node: TreeSearchNode | None = None):
+    assert node is not None
+
     if node.unexpanded_actions or node.state.is_terminal:
         return node
 
     if not node.is_max_node:
-        return self.select(choice(node.children))
+        return uct_select_stochastic_environment(agent, choice(node.children))
 
     c = node.cumulative_utility / node.count
 
@@ -113,14 +118,14 @@ def uct_select_stochastic_environment(self, node):
 
     best_child = sorted(node.children, key=uct)[-1]
 
-    return self.select(best_child)
+    return uct_select_stochastic_environment(agent, best_child)
 
 
-def queue_select(agent: TreeSearchAgent):
+def queue_select(agent: "TreeSearchAgent"):
     return agent.frontier.pop()
 
 
-def principal_variation_select(agent: TreeSearchAgent):
+def principal_variation_select(agent: "TreeSearchAgent"):
     def recurse(node: TreeSearchNode):
         if node.unexpanded_actions or not node.children:
             return node

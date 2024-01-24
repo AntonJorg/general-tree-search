@@ -1,30 +1,26 @@
 import random
 from math import log, sqrt
 
-from gts.agents.mcts_agents import MCTSAgent
-from gts.agents.minimax_agents import IterativeDeepeningAgent
+from gts.agents.mcts_agents import mcts_agent
+from gts.agents.minimax_agents import iterative_deepening_agent
+from gts.components import *
 
 
-class MaximizerMCTSAgent(MCTSAgent):
-    """
-    Changes the selection and simulation step to take into
-    account chance nodes. The simulation step takes into account the
-    non-uniform environment effect distribution, the selection
-    step does not.
-    """
-
-    def select(self):
-        return self.uct_select_stochastic_environment(self.root)
-
-    def evaluate(self, state):
-        return self.simulate_stochastic_environment(state)
+maximizer_mcts_agent = (
+   mcts_agent.to_builder()
+       .with_select(select.uct_select_stochastic_environment)
+       .with_evaluate(evaluate.simulate_stochastic_environment)
+       .build("MaximizerMCTSAgent")
+)
 
 
-class IDExpectiMaxAgent(IterativeDeepeningAgent):
-    """
-    Swaps out MiniMax backups for ExpextiMax backups, maximizing on
-    max nodes but averaging otherwise.
-    """
+"""
+Swaps out MiniMax backups for ExpextiMax backups, maximizing on
+max nodes but averaging otherwise.
+"""
+iterative_deepening_expectimax_agent = (
+    iterative_deepening_agent.to_builder()
+        .with_backpropagate(backpropagate.backpropagate_expectimax)
+        .build("IterativeDeepeningExpectiMaxAgent")
+)
 
-    def backpropagate(self, node, value):
-        self.backpropagate_expectimax(node, value)

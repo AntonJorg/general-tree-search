@@ -6,18 +6,20 @@ These methods should:
     - Only propagate up through the tree, i.e. from node to parent
     - Not change the structure of the tree
 """
-from gts.agents import TreeSearchAgent
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gts.agents import TreeSearchAgent
 from gts.tree import TreeSearchNode
 
 
-def backpropagate_sum(agent: TreeSearchAgent, node: TreeSearchNode, value: float) -> None:
+def backpropagate_sum(agent: "TreeSearchAgent", node: TreeSearchNode, value: float) -> None:
     node.cumulative_utility += value
     node.count += 1
 
     if node.parent is not None:
         backpropagate_sum(agent, node.parent, value)
 
-def backpropagate_minimax(_: TreeSearchAgent, node: TreeSearchNode, value: float) -> None:
+def backpropagate_minimax(_: "TreeSearchAgent", node: TreeSearchNode, value: float) -> None:
     def bp(node):
 
         max_child_eval = max(c.eval for c in node.children if c.eval is not None)
@@ -47,7 +49,7 @@ def backpropagate_minimax(_: TreeSearchAgent, node: TreeSearchNode, value: float
         if node.parent is not None:
             bp(node.parent)
 
-def backpropagate_expectimax(_: TreeSearchAgent, node, value):
+def backpropagate_expectimax(_: "TreeSearchAgent", node, value):
     def bp(n):
         if (
             n is None
@@ -69,7 +71,7 @@ def backpropagate_expectimax(_: TreeSearchAgent, node, value):
     node.eval = value
     bp(node.parent)
 
-def backpropagate_sum_and_minimax(agent: TreeSearchAgent, node, value):
+def backpropagate_sum_and_minimax(agent: "TreeSearchAgent", node, value):
     evaluation, simulation_result = value
 
     backpropagate_sum(agent, node, simulation_result)
@@ -90,7 +92,7 @@ def backpropagate_sum_and_minimax(agent: TreeSearchAgent, node, value):
 
     bp(node.parent)
 
-def store_eval_and_backpropagate_sum(agent: TreeSearchAgent, node, value):
+def store_eval_and_backpropagate_sum(agent: "TreeSearchAgent", node, value):
     evaluation, simulation_result = value
 
     node.eval = evaluation

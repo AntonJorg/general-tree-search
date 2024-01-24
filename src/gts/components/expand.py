@@ -6,12 +6,18 @@ These methods should:
     - Possibly modify tree structure and frontier
     - Not modify node data unrelated to tree structure
 """
-from gts.agents import TreeSearchAgent
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gts.agents import TreeSearchAgent
 from gts.games.connectfour import ConnectFourState
 from gts.tree import TreeSearchNode
 
 
-def expand_next(agent: TreeSearchAgent, node: TreeSearchNode, dfs: bool = False) -> TreeSearchNode:
+def expand_next(
+    agent: "TreeSearchAgent", node: TreeSearchNode, dfs: bool = False
+) -> TreeSearchNode:
     """ """
     # do not try to expand terminal states
     if node.state.is_terminal:
@@ -33,22 +39,24 @@ def expand_next(agent: TreeSearchAgent, node: TreeSearchNode, dfs: bool = False)
     return leaf
 
 
-def expand_next_dfs(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
+def expand_next_dfs(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
     return expand_next(agent, node, dfs=True)
 
 
 def expand_next_depth_limited(
-    agent: TreeSearchAgent, node: TreeSearchNode, dfs: bool = False
+    agent: "TreeSearchAgent", node: TreeSearchNode, dfs: bool = False
 ) -> TreeSearchNode:
     """ """
     # depth limiting
-    if node.depth == agent.depth:
+    if node.depth == agent.params["depth"]:
         return node
 
     return expand_next(agent, node, dfs)
 
 
-def expand_next_alpha_beta(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
+def expand_next_alpha_beta(
+    agent: "TreeSearchAgent", node: TreeSearchNode
+) -> TreeSearchNode:
     """ """
     # alpha beta pruning
     # uses strict inequalities to prevent suboptimal moves from having equal
@@ -60,7 +68,6 @@ def expand_next_alpha_beta(agent: TreeSearchAgent, node: TreeSearchNode) -> Tree
             or not node.is_max_node
             and node.children[-1].eval < node.alpha
         ):
-
             agent.search_info["ab_prunes"] += 1
 
             node.unexpanded_actions.clear()
@@ -69,8 +76,8 @@ def expand_next_alpha_beta(agent: TreeSearchAgent, node: TreeSearchNode) -> Tree
     return expand_next_depth_limited(agent, node, dfs=True)
 
 
-def expand_next_beam(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
-    """  """
+def expand_next_beam(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
+    """ """
     # beam search on root
     if node.parent is None and not node.children:
         node.unexpanded_actions = filter_unexpanded_actions(agent, node)
@@ -83,9 +90,10 @@ def expand_next_beam(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearch
 
     return leaf
 
+
 # TODO: this function should be supplied in the builder, and is not necessarily
 # component
-def filter_unexpanded_actions(agent: TreeSearchAgent, node: TreeSearchNode):
+def filter_unexpanded_actions(agent: "TreeSearchAgent", node: TreeSearchNode):
     match node.state:
         case ConnectFourState():
             return _connectfour_filter_unexpanded_actions(agent, node)
@@ -93,7 +101,9 @@ def filter_unexpanded_actions(agent: TreeSearchAgent, node: TreeSearchNode):
             return node.unexpanded_actions
 
 
-def _connectfour_filter_unexpanded_actions(agent: TreeSearchAgent, node: TreeSearchNode[ConnectFourState]):
+def _connectfour_filter_unexpanded_actions(
+    agent: "TreeSearchAgent", node: TreeSearchNode[ConnectFourState]
+):
     # root case
     if not node.state.piece_mask:
         middle = node.state.width // 2
@@ -117,7 +127,7 @@ def _connectfour_filter_unexpanded_actions(agent: TreeSearchAgent, node: TreeSea
     return sorted(beam, key=lambda x: -abs(x - node.state.width // 2 + 0.1))
 
 
-def expand_all(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
+def expand_all(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
     """ """
     # TODO: Test if necessary
     if node.state.is_terminal:
@@ -138,10 +148,11 @@ def expand_all(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
     return leaf
 
 
-def expand_all_depth_limited(agent: TreeSearchAgent, node: TreeSearchNode) -> TreeSearchNode:
+def expand_all_depth_limited(
+    agent: "TreeSearchAgent", node: TreeSearchNode
+) -> TreeSearchNode:
     """ """
-    if node.depth == agent.depth:
+    if node.depth == agent.params["depth"]:
         return node
 
     return expand_all(agent, node)
-

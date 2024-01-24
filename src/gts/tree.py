@@ -18,7 +18,7 @@ class TreeSearchNode(Generic[T]):
     def __init__(
         self,
         state: GameState[T],
-        parent: "TreeSearchNode[T]" | None,
+        parent: "TreeSearchNode[T] | None",
         generating_action: T | None,
         depth: int = 0,
         alpha=None,
@@ -28,7 +28,7 @@ class TreeSearchNode(Generic[T]):
 
         # data structure
         self.parent = parent
-        self.children: list["TreeSearchNode"] = []
+        self.children: list["TreeSearchNode[T]"] = []
         self.depth = depth
 
         # game related information

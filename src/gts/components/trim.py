@@ -1,47 +1,58 @@
-class Trim:
-    """
-    Defines methods for implementing TreeSearchAgent.trim.
+"""
+Defines methods for implementing TreeSearchAgent.trim.
 
-    These methods should:
-        - Take no arguments
-        - Evaluate the state of the search tree and/or the frontier
-        - Possibly modify the search tree and/or the frontier
-        - Return nothing
-    """
+These methods should:
+    - Take no arguments
+    - Evaluate the state of the search tree and/or the frontier
+    - Possibly modify the search tree and/or the frontier
+    - Return nothing
+"""
+from gts.components.get_best_move import get_minimax_move
+from typing import TYPE_CHECKING
 
-    def reset_tree_increment_depth(self):
-        """ """
+if TYPE_CHECKING:
+    from gts.agents import TreeSearchAgent
 
-        def deepest_node(node):
-            if node.children:
-                return max(deepest_node(c) for c in node.children)
-            else:
-                return node.depth
 
-        # log before increase to reflect last completed search
-        self.search_info["depth"] = min(self.depth, deepest_node(self.root))
+def reset_tree_increment_depth(agent: "TreeSearchAgent"):
+    """ """
 
-        action = self.get_minimax_move()
-        self.best_move = action
-        self.depth += 1
+    def deepest_node(node):
+        if node.children:
+            return max(deepest_node(c) for c in node.children)
+        else:
+            return node.depth
 
-        # reset search tree
-        self.last_iter_root = self.root.copy()
-        self.root.reset()
-        self.frontier.append(self.root)
+    assert agent.root is not None
 
-    def fractional_pruning(self):
-        """ """
+    # log before increase to reflect last completed search
+    agent.search_info["depth"] = min(agent.params["depth"], deepest_node(agent.root))
 
-        def recurse(node):
-            node.children = [
-                c
-                for c in node.children
-                if c.count >= node.count / (node.branching_factor + self.pruning_factor)
-            ]
+    action = get_minimax_move(agent)
+    agent.params["best_move"] = action
+    agent.params["depth"] += 1
 
-            for c in node.children:
-                if not c.unexpanded_actions:
-                    recurse(c)
+    # reset search tree
+    agent.params["last_iter_root"] = agent.root.copy()
+    agent.root.reset()
 
-        recurse(self.root)
+    agent.frontier.clear()
+    agent.frontier.append(agent.root)
+
+
+def fractional_pruning(agent: "TreeSearchAgent"):
+    """ """
+
+    def recurse(node):
+        node.children = [
+            c
+            for c in node.children
+            if c.count
+            >= node.count / (node.branching_factor + agent.params["pruning_factor"])
+        ]
+
+        for c in node.children:
+            if not c.unexpanded_actions:
+                recurse(c)
+
+    recurse(agent.root)

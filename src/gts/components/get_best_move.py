@@ -4,7 +4,7 @@ Defines methods for implementing TreeSearchAgent.get_best_move.
 These methods should:
     - Take no arguments
     - Return an action that is in agent.root.state.applicable_actions
-    - Base its action choice on the search tree or information that TreeSearchAgent.reflect has stored
+    - Base its action choice on the root node, its children, or the memory dict
     - Have no side effects
 """
 from math import sqrt
@@ -14,6 +14,8 @@ from gts.agents.treesearch_agent import TreeSearchAgent
 
 
 def get_minimax_move(agent: TreeSearchAgent):
+    assert agent.root is not None
+
     utils = (c.eval for c in agent.root.children)
 
     m = max(utils) if agent.root.is_max_node else min(utils)
@@ -33,7 +35,7 @@ def random_move(agent: TreeSearchAgent):
 
 
 def get_stored_best_move(agent: TreeSearchAgent):
-    return agent.best_move
+    return agent.params["best_move"]
 
 
 def weighted_eval_utility_move(agent: TreeSearchAgent):
@@ -50,4 +52,3 @@ def weighted_eval_utility_move(agent: TreeSearchAgent):
         return evaluation * q + exploit * (1 - q)
 
     return sorted(agent.root.children, key=weight)[-1].generating_action
-
