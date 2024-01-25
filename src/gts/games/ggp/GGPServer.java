@@ -25,16 +25,6 @@ import java.util.List;
 // TODO: Credit https://github.com/JacobPjetursson/Board-game-strategy-synthesis
 public class GGPServer {
 
-	public static final int PLAYER1 = 1;
-	public static final int PLAYER2 = 2;
-
-	private static StateMachine sm;
-	public static Role p1role;
-	public static Role p2role;
-	public static Move noop;
-
-	private static int max_precons;
-
 	public static void main(String[] args) {
 		GGPServer app = new GGPServer();
 		// app is now gateway.entry_point on the python side
@@ -42,32 +32,46 @@ public class GGPServer {
 		server.start();
 	}
 
-	public static void loadGDL(String filepath) {
+	public static StateMachineWrapper getStateMachine(String filepath) {
 		String rawSheet = FileUtils.readFileAsString(new File(filepath));
-		Game theGame = Game.createEphemeralGame(Game.preprocessRulesheet(rawSheet));
-		if (theGame.getRules() == null || theGame.getRules().size() == 0) {
+		Game game = Game.createEphemeralGame(Game.preprocessRulesheet(rawSheet));
+		StateMachineWrapper smw = new StateMachineWrapper();
+		if (game.getRules() == null || game.getRules().size() == 0) {
 			System.err.println("Problem reading the file " + filepath + " or parsing the GDL.");
-			return;
+			return smw;
 		}
 
 		try {
-			new StaticValidator().checkValidity(theGame);
+			new StaticValidator().checkValidity(game);
 		} catch (ValidatorException e) {
 			System.err.println("GDL validation error: " + e.toString());
-			return;
+			return smw;
 		}
-		List<Gdl> rules = theGame.getRules();
-		initialize(rules);
+		List<Gdl> rules = game.getRules();
+		smw.initialize(rules);
+		return smw;
 	}
 
-	private static void initialize(List<Gdl> rules) {
+}
+
+class StateMachineWrapper {
+	public static final int PLAYER1 = 1;
+	public static final int PLAYER2 = 2;
+
+	private static StateMachine sm;
+	public static List<Role> roles;
+	public static Role p1role;
+	public static Role p2role;
+	public static Move noop;
+
+	public static void initialize(List<Gdl> rules) {
 
 		sm = new ProverStateMachine();
 		sm.initialize(rules);
-		p1role = sm.getRoles().get(0);
-		p2role = sm.getRoles().get(1);
+		roles = sm.getRoles();
+		p1role = roles.get(0);
+		p2role = roles.get(1);
 		noop = new Move(GdlPool.getConstant("noop"));
-		max_precons = sm.getInitialState().getContents().size();
 	}
 
 	public static MachineState getInitialState() {
@@ -93,6 +97,15 @@ public class GGPServer {
 
 	public static int roleToPlayer(Role r) {
 		return r.equals(p1role) ? PLAYER1 : PLAYER2;
+	}
+
+	public static double getUtility(MachineState ms) throws GoalDefinitionException {
+		if (!sm.isTerminal(ms)) // TODO - catch exception and suppress output
+			return 0.5;
+
+		List<Integer> goals = sm.getGoals(ms); // same order as getRoles()
+
+		return goals.get(0) / 100;
 	}
 
 	/**
@@ -132,6 +145,10 @@ public class GGPServer {
 		return playerWinners;
 	}
 
+	public static Role getRole(int idx) {
+		return roles.get(idx);
+	}
+
 	public static Role getRole(MachineState ms) {
 		try {
 			List<Move> moves = getLegalMoves(ms, p1role);
@@ -144,4 +161,5 @@ public class GGPServer {
 	public static List<Move> getLegalMoves(MachineState ms, Role r) throws MoveDefinitionException {
 		return sm.getLegalMoves(ms, r);
 	}
+
 }

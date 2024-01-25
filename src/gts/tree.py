@@ -4,7 +4,8 @@ from typing import Generic, TypeVar
 from gts.games import GameState
 
 
-T = TypeVar('T')
+T = TypeVar("T")
+
 
 class TreeSearchNode(Generic[T]):
     """
@@ -34,7 +35,8 @@ class TreeSearchNode(Generic[T]):
         # game related information
         self.state = state
         self.generating_action = generating_action
-        self.unexpanded_actions = state.applicable_actions.copy()
+        # [:] equals .copy() but works for py4j.java_collections.JavaList as well
+        self.unexpanded_actions = state.applicable_actions[:]
         self.branching_factor = len(self.unexpanded_actions)
 
         # search related information
@@ -80,4 +82,3 @@ class TreeSearchNode(Generic[T]):
         node = TreeSearchNode(self.state, self.parent, self.generating_action)
         node.__dict__ = self.__dict__.copy()
         return node
-

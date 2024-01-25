@@ -4,6 +4,7 @@ import subprocess
 import requests
 import tarfile
 import io
+import shutil
 
 import gts
 
@@ -22,6 +23,8 @@ JAVA_CUP_URL = (
     "https://repo1.maven.org/maven2/com/github/vbmacher/java-cup/11b/java-cup-11b.jar"
 )
 JAVA_CUP_RUNTIME_URL = "https://repo1.maven.org/maven2/com/github/vbmacher/java-cup-runtime/11b/java-cup-runtime-11b.jar"
+
+ESCAPE_ROPE_URL = "https://repo1.maven.org/maven2/net/alloyggp/escape-rope/0.0.5/escape-rope-0.0.5.jar"
 
 
 def get_source_paths():
@@ -49,62 +52,33 @@ def download_external_source():
     if not pathlib.Path.is_dir(java_jar):
         pathlib.Path.mkdir(java_jar)
 
-    response = requests.get(GUAVA_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Guava jar!")
+    def download_jar_dependency(filename: str, url: str):
+        print(f"\t\t{filename}")
+        response = requests.get(url, stream=True)
+        if response.status_code != 200:
+            raise RuntimeError(f"Couldn't download {filename}!")
 
-    with open(java_jar / "guava.jar", "wb") as f:
-        f.write(response.raw.read())
+        with open(java_jar / filename, "wb") as f:
+            f.write(response.raw.read())
 
-    response = requests.get(GUAVA_DEPENDENCY_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Failureaccess jar!")
+    jars_to_download = [
+        ("guava.jar", GUAVA_URL),
+        ("failureaccess.jar", GUAVA_DEPENDENCY_URL),
+        ("junit.jar", JUNIT_URL),
+        ("hamcrest.jar", JUNIT_DEPENDENCY_URL),
+        ("alloyggp.jar", ALLOYGGP_URL),
+        ("ggp-validation.jar", GGP_VALIDATION_URL),
+        ("java-cup.jar", JAVA_CUP_URL),
+        ("java-cup-runtime.jar", JAVA_CUP_RUNTIME_URL),
+        ("escape-rope.jar", ESCAPE_ROPE_URL),
+    ]
 
-    with open(java_jar / "failureaccess.jar", "wb") as f:
-        f.write(response.raw.read())
+    print("\tDownloading jar dependencies...")
+    for file_name, url in jars_to_download:
+        download_jar_dependency(file_name, url)
 
-    response = requests.get(JUNIT_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Junit jar!")
-
-    with open(java_jar / "junit.jar", "wb") as f:
-        f.write(response.raw.read())
-
-    response = requests.get(JUNIT_DEPENDENCY_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Hamcrest jar!")
-
-    with open(java_jar / "hamcrest.jar", "wb") as f:
-        f.write(response.raw.read())
-
-    response = requests.get(ALLOYGGP_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download AlloyGGP jar!")
-
-    with open(java_jar / "alloyggp.jar", "wb") as f:
-        f.write(response.raw.read())
-
-    response = requests.get(GGP_VALIDATION_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download GGP Validation jar!")
-
-    with open(java_jar / "ggp-validation.jar", "wb") as f:
-        f.write(response.raw.read())
-
-    response = requests.get(JAVA_CUP_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Java Cup jar!")
-
-    with open(java_jar / "java-cup.jar", "wb") as f:
-        f.write(response.raw.read())
-
-    response = requests.get(JAVA_CUP_RUNTIME_URL, stream=True)
-    if response.status_code != 200:
-        raise RuntimeError("Couldn't download Java Cup Runtime jar!")
-
-    with open(java_jar / "java-cup-runtime.jar", "wb") as f:
-        f.write(response.raw.read())
-
+    print("\tDownloading main GGP dependency...")
+    # fetches a .tar.gz
     response = requests.get(GGP_BASE_URL, stream=True)
 
     if response.status_code != 200:
@@ -133,7 +107,6 @@ def download_external_source():
         tar_path = pathlib.Path(*tar_path.parts[4:])
 
         if any(str(tar_path).startswith(str(p)) for p in paths_to_download):
-            print(tar_path)
             return member.replace(name=pathlib.Path(path, tar_path).as_posix())
         return None
 
@@ -145,8 +118,7 @@ def compile_source():
     source_files = java_source.glob("**/*.java")
     source_files = " ".join((str(f) for f in source_files))
 
-    print("JAR:", java_jar / "*")
-
+    print("\tCompiling external sources...")
     result = subprocess.run(
         f"javac -Xlint:none -classpath '{java_jar/'*'}' -d {java_bin} {source_files}",
         shell=True,
@@ -154,12 +126,11 @@ def compile_source():
         capture_output=True,
     )
 
-    if result.returncode == 0:
-        print(result.stdout.decode())
-    else:
+    if result.returncode != 0:
         print(result.stderr.decode())
         raise RuntimeError("Could not compile Java source!")
 
+    print("\tCompiling GGPServer...")
     result = subprocess.run(
         f"javac -Xlint:none -classpath {jar_path}:'{java_jar/'*'}':'{java_bin/'*'}' {raw_source_path}",
         shell=True,
@@ -167,36 +138,59 @@ def compile_source():
         capture_output=True,
     )
 
-    if result.returncode == 0:
-        print(result.stdout.decode())
-    else:
+    if result.returncode != 0:
         print(result.stderr.decode())
         raise RuntimeError("Could not compile GGPServer!")
 
 
 def run():
     cmd = f"java -classpath {compiled_source_path.parent}:{java_jar}:{java_jar / '*'}:{jar_path}:{java_bin} GGPServer"
-    print(cmd)
-    result = subprocess.run(
-        cmd,
-        shell=True,
-        check=False,
-        capture_output=True,
-    )
 
-    if result.returncode == 0:
-        print(result.stdout.decode())
-    else:
-        print(result.stderr.decode())
+    try:
+        subprocess.run(
+            cmd,
+            shell=True,
+            check=False,
+            capture_output=True,
+        )
+    except KeyboardInterrupt:
+        print("Shutting down...")
+        exit()
 
 
+# TODO: Rework names and initialization
 raw_source_path, compiled_source_path = get_source_paths()
 jar_path = get_jar_path()
 java_source, java_bin, java_jar = get_external_java_paths()
 
-# if not pathlib.Path.is_file(compiled_source_path):
-download_external_source()
+# TODO: CLI interface
+FORCE_DOWNLOAD = True
+FORCE_COMPILE = True
+DISABLE_RUN = False
 
-compile_source()
+if __name__ == "__main__":
+    if FORCE_DOWNLOAD or not java_source.is_dir():
+        print("Removing existing files...")
 
-run()
+        if java_source.is_dir():
+            shutil.rmtree(java_source)
+        if java_jar.is_dir():
+            shutil.rmtree(java_jar)
+        if java_bin.is_dir():
+            shutil.rmtree(java_bin)
+
+        print("Downloading external sources...")
+        download_external_source()
+
+    if FORCE_COMPILE or not java_bin.is_dir():
+        print("Removing existing files...")
+
+        if java_bin.is_dir():
+            shutil.rmtree(java_bin)
+
+        print("Compiling...")
+        compile_source()
+
+    if not DISABLE_RUN:
+        print("Running game server... (Ctrl + C to quit)")
+        run()

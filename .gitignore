@@ -1,7 +1,7 @@
 # Project specific
 /games/
 /logs/
-/src/gts/java/
+/src/gts/java/**/*
 *.class
 
 # Byte-compiled / optimized / DLL files

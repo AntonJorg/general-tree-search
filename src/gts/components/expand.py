@@ -70,7 +70,7 @@ def expand_next_alpha_beta(
         ):
             agent.search_info["ab_prunes"] += 1
 
-            node.unexpanded_actions.clear()
+            node.unexpanded_actions = []  # .clear() not possible for py4j compatibility
             return node
 
     return expand_next_depth_limited(agent, node, dfs=True)

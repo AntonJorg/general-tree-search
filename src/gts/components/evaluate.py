@@ -59,6 +59,8 @@ def static_evaluation(agent: "TreeSearchAgent", state: GameState):
             return _static_eval_connectfour(agent, state)
         case NimState():
             return _static_eval_nim(agent, state)
+        case GGPState():
+            return _static_eval_ggp(agent, state)
         case Twenty48State():
             return _static_eval_2048(agent, state)
         case DummyState():
@@ -134,6 +136,10 @@ def _static_eval_nim(agent: "TreeSearchAgent", state: NimState):
         return int(not bool(result))
 
     return int(bool(result))
+
+
+def _static_eval_ggp(agent: "TreeSearchAgent", state: GGPState):
+    return state.utility
 
 
 def _static_eval_2048(agent: "TreeSearchAgent", state: Twenty48State):

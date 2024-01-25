@@ -1,9 +1,13 @@
 from py4j.java_gateway import JavaGateway
 
 
-game = JavaGateway().entry_point
+class GGPState:
+    pass
 
-game.loadGDL("games/ticTacToe/ticTacToe.kif")
+
+ggp_server = JavaGateway().entry_point
+
+game = ggp_server.getStateMachine("games/ticTacToe/ticTacToe.kif")
 
 state = game.getInitialState()
 for atom in state.getContents():
