@@ -51,8 +51,8 @@ class TreeSearchNode(Generic[T]):
 
     def __repr__(self):
         return f"Node(action={self.generating_action}, \
-                utility={self.cumulative_utility}, count={self.count}, \
-                evaluation={self.eval}, depth={self.depth})"
+utility={self.cumulative_utility}, count={self.count}, \
+evaluation={self.eval}, depth={self.depth})"
 
     def print_tree(self, max_depth: int | None = None, depth: int = 0):
         print(depth * "--", self)

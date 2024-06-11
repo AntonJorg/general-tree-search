@@ -23,15 +23,15 @@ if TYPE_CHECKING:
 from gts.tree import TreeSearchNode
 
 
-# should_evaluate and should_backpropagate methods
-def if_depth_reached(agent: "TreeSearchAgent", node: TreeSearchNode, _: float = 0) -> bool:
-    return node.depth == agent.params['depth'] or node.state.is_terminal
+# should_backpropagate methods
+def if_depth_reached(node: TreeSearchNode, _value, params: dict, search_info: dict) -> bool:
+    return node.depth == params['depth_limit'] or node.state.is_terminal
 
 def if_depth_reached_or_fully_expanded(
-    agent, node: TreeSearchNode, _: float = 0
+    node: TreeSearchNode, _value, params: dict, search_info: dict
 ) -> bool:
     return (
-        node.depth == agent.params['depth']
+        node.depth == params['depth_limit']
         or node.state.is_terminal
         or not node.unexpanded_actions
     )
@@ -44,16 +44,18 @@ def if_terminal(_: "TreeSearchAgent", node: TreeSearchNode, __: float =0):
     return node.state.is_terminal
 
 # should_terminate methods
-def timed_termination(agent: "TreeSearchAgent"):
-    assert agent.start_time is not None
-    assert agent.params['search_time'] is not None
+def timed_termination(root: TreeSearchNode, params: dict, search_info: dict):
     return (
-        time.process_time_ns() - agent.start_time > agent.params['search_time'] * 1_000_000_000
+        time.process_time_ns() - params['start_time'] > params['search_time'] * 1_000_000_000
     )
 
-def when_fully_evaluated(agent: "TreeSearchAgent"):
-    assert agent.root is not None
-    return agent.root.eval is not None
+def when_fully_evaluated(root: TreeSearchNode, params: dict, search_info: dict):
+    return root.eval is not None
+
+def when_fully_evaluated_or_timed_termination(root: TreeSearchNode, params: dict, search_info: dict):
+    return (
+        time.process_time_ns() - params['start_time'] > params['search_time'] * 1_000_000_000
+    ) or root.eval is not None
 
 def periodic(agent: "TreeSearchAgent", frequency=100):
     assert agent.root is not None

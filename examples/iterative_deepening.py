@@ -1,23 +1,37 @@
-import gts.components as c
-from gts.agents.treesearch_agent import AgentBuilder
-from gts.games.connectfour import ConnectFourState
+import time
 
+from gts.agents.treesearch_agent import TreeSearchAgent
+from gts.agents.wrappers import IterativeDeepeningWrapper
+from gts.games.connectfour import ConnectFourState
+from gts.components import (
+    action_value,
+    control,
+    expand,
+    evaluate,
+    backpropagate,
+    generic,
+    frontier
+)
 
 if __name__ == "__main__":
-    agent = (
-        AgentBuilder()
-        .with_should_terminate(c.control.timed_termination)
-        .with_select(c.select.queue_select)
-        .with_expand(c.expand.expand_next_dfs)
-        .with_should_evaluate(c.control.if_depth_reached, depth=1)
-        .with_evaluate(c.evaluate.static_evaluation)
-        .with_should_backpropagate(c.control.if_depth_reached)
-        .with_backpropagate(c.backpropagate.backpropagate_minimax)
-        .with_should_trim(c.control.when_fully_evaluated)
-        .with_trim(c.trim.reset_tree_increment_depth)
-        .with_get_best_move(c.get_best_move.get_minimax_move)
-        .build(name="IterativeDeepening")
+
+    agent = TreeSearchAgent(
+        name="MiniMax",
+        should_terminate=control.when_fully_evaluated_or_timed_termination,
+        use_frontier=generic.always,
+        frontier=frontier.FrontierLIFO,
+        select=generic.no_op,
+        expand=expand.expand_all_depth_limited,
+        evaluate=evaluate.static_evaluation,
+        should_backpropagate=control.if_depth_reached,
+        backpropagate=backpropagate.backpropagate_minimax,
+        action_value=action_value.minimax_value,
+        params={
+            "depth_limit": 5,
+        }
     )
+
+    agent = IterativeDeepeningWrapper(agent)
 
     print(agent.info())
 

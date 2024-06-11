@@ -1,15 +1,24 @@
 import time
 from copy import deepcopy
 from collections import defaultdict, deque
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, TypeVar, Type
 from dataclasses import dataclass, field, asdict
 
 from gts.games import GameState
 from gts.tree import TreeSearchNode
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from gts.components.frontier import Frontier
+
+
 T = TypeVar("T")
 
 ShouldTerminateType = Callable[["TreeSearchAgent"], bool]
+
+UseFrontierType = Callable[["TreeSearchAgent"], bool]
+
+ShouldSelectType = Callable[["TreeSearchAgent"], bool]
 
 SelectType = Callable[["TreeSearchAgent"], TreeSearchNode]
 
@@ -29,130 +38,27 @@ BackpropagateType = (
     | Callable[["TreeSearchAgent", TreeSearchNode, float], None]
 )
 
-ShouldTrimType = Callable[["TreeSearchAgent"], bool]
-
-TrimType = Callable[["TreeSearchAgent"], None]
-
-GetBestMoveType = Callable[["TreeSearchAgent"], T]
+ActionValueType = Callable[[TreeSearchNode], float]
 
 
 @dataclass
-class ComponentFunctions(Generic[T]):
+class Components(Generic[T]):
     should_terminate: ShouldTerminateType
+    use_frontier: UseFrontierType
     select: SelectType
     expand: ExpandType
-    should_evaluate: ShouldEvaluateType
-    evaluate: EvaluateType[T]
+    evaluate: EvaluateType
     should_backpropagate: ShouldBackpropagateType
     backpropagate: BackpropagateType
-    should_trim: ShouldTrimType
-    trim: TrimType
-    get_best_move: GetBestMoveType[T]
-    params: dict
-
-    def function_dict(self):
-        return {k: v for k, v in asdict(self).items() if not isinstance(v, dict)}
-
-
-@dataclass
-class AgentBuilder:
-    should_terminate: ShouldTerminateType | None = None
-    select: SelectType | None = None
-    expand: ExpandType | None = None
-    should_evaluate: ShouldEvaluateType | None = None
-    evaluate: EvaluateType | None = None
-    should_backpropagate: ShouldBackpropagateType | None = None
-    backpropagate: BackpropagateType | None = None
-    should_trim: ShouldTrimType | None = None
-    trim: TrimType | None = None
-    get_best_move: GetBestMoveType | None = None
+    action_value: ActionValueType
+    frontier: Type["Frontier"]
     params: dict = field(default_factory=dict)
-
-    def merge(self, other: "AgentBuilder"):
-        d1, d2 = asdict(self), asdict(other)
-        return AgentBuilder(
-            **{
-                k: (d1[k] if d2[k] is None else d2[k])
-                for k in d1.keys()
-                if k != "params"
-            },
-            params={**self.params, **other.params},
-        )
-
-    def with_should_terminate(self, func: ShouldTerminateType, **params):
-        self.should_terminate = func
-        self.add_params(**params)
-        return self
-
-    def with_select(self, func: SelectType, **params):
-        self.select = func
-        self.add_params(**params)
-        return self
-
-    def with_expand(self, func: ExpandType, **params):
-        self.expand = func
-        self.add_params(**params)
-        return self
-
-    def with_should_evaluate(self, func: ShouldEvaluateType, **params):
-        self.should_evaluate = func
-        self.add_params(**params)
-        return self
-
-    def with_evaluate(self, func: EvaluateType, **params):
-        self.evaluate = func
-        self.add_params(**params)
-        return self
-
-    def with_should_backpropagate(self, func: ShouldBackpropagateType, **params):
-        self.should_backpropagate = func
-        self.add_params(**params)
-        return self
-
-    def with_backpropagate(self, func: BackpropagateType, **params):
-        self.backpropagate = func
-        self.add_params(**params)
-        return self
-
-    def with_should_trim(self, func: ShouldTrimType, **params):
-        self.should_trim = func
-        self.add_params(**params)
-        return self
-
-    def with_trim(self, func: TrimType, **params):
-        self.trim = func
-        self.add_params(**params)
-        return self
-
-    def with_get_best_move(self, func: GetBestMoveType, **params):
-        self.get_best_move = func
-        self.add_params(**params)
-        return self
-
-    def build(self, name: str):
-        missing = self.missing_components()
-        if missing:
-            s = "\n".join([f"\t- {m}" for m in missing])
-            raise ValueError(f"All functions must be specified! Missing:\n{s}")
-        cf = ComponentFunctions(**asdict(self))
-        return TreeSearchAgent(name, cf)
-
-    def missing_components(self):
-        return [k for k, v in asdict(self).items() if v is None]
-
-    def all_defined(self):
-        return all(v is not None for _, v in asdict(self).items())
-
-    def no_trim(self):
-        from gts.components.generic import never, no_op
-
-        self.should_trim = never
-        self.trim = no_op
-        return self
-
-    def add_params(self, **kwargs):
-        self.params.update(kwargs)
-        return self
+    
+    def to_function_dict(self):
+        return {k: v for k, v in asdict(self).items() if not isinstance(v, dict)}
+    
+    def to_dict(self):
+        return asdict(self)
 
 
 class TreeSearchAgent:
@@ -160,30 +66,34 @@ class TreeSearchAgent:
     Agent implements the General Tree Search Algorithm (GTS) in self.search.
     """
 
-    def __init__(self, name: str, cf: ComponentFunctions):
+    def __init__(
+            self,
+            name: str,
+            should_terminate: ShouldTerminateType,
+            use_frontier: UseFrontierType,
+            select: SelectType,
+            expand: ExpandType,
+            evaluate: EvaluateType,
+            should_backpropagate: ShouldBackpropagateType,
+            backpropagate: BackpropagateType,
+            action_value: ActionValueType,
+            frontier: Type["Frontier"],
+            params = {},
+        ):
         self.name = name
 
-        self.component_functions = cf
+        self.initial_params = params
 
-        self.initial_params = cf.params
-        self.params = {}
+        self.should_terminate = should_terminate
+        self.use_frontier = use_frontier
+        self.select = select
+        self.expand = expand
+        self.evaluate = evaluate
+        self.should_backpropagate = should_backpropagate
+        self.backpropagate = backpropagate
+        self.action_value = action_value
 
-        self.memory = {}
-
-        # unpack manually to enable type hinting
-        self.should_terminate = cf.should_terminate
-        self.select = cf.select
-        self.expand = cf.expand
-        self.should_evaluate = cf.should_evaluate
-        self.evaluate = cf.evaluate
-        self.should_backpropagate = cf.should_backpropagate
-        self.backpropagate = cf.backpropagate
-        self.should_trim = cf.should_trim
-        self.trim = cf.trim
-        self.get_best_move = cf.get_best_move
-
-        self.root = None
-        self.frontier: deque[TreeSearchNode] = deque()
+        self.frontier = frontier
 
         self.start_time: int | None = None
 
@@ -193,7 +103,7 @@ class TreeSearchAgent:
     def __repr__(self):
         return f"Agent[{self.name}]"
 
-    def search(self, state: GameState[T], **params) -> tuple[T, dict]:
+    def search(self, state: GameState[T], **search_params) -> tuple[T, dict]:
         """
         Implements General Tree Search (GTS).
         """
@@ -202,52 +112,84 @@ class TreeSearchAgent:
             raise ValueError("Cannot search terminal states!")
 
         self.search_info.clear()
+        self.search_info["depth_reached"] = 0
 
-        # initialize frontier
-        self.root = TreeSearchNode(state, None, None)
-        self.frontier.append(self.root)
+        root = TreeSearchNode(state, None, None)
 
-        self.params = deepcopy(self.initial_params)
-        self.params.update(params)
+        # initialize frontier with root node
+        frontier = self.frontier()
+        frontier.push(root)
+
+        # copy initial params and update with search-time params
+        params = deepcopy(self.initial_params)
+        params.update(search_params)
 
         # use process_time_ns for accuracy when parallelizing
-        self.start_time = time.process_time_ns()
+        params["start_time"] = time.process_time_ns()
 
-        while not self.should_terminate(self):
-            node = self.select(self)
+        while not self.should_terminate(root, params, self.search_info):
+            print("Tree:")
+            root.print_tree()
+            if self.use_frontier(root, params, self.search_info):
+                node = frontier.pop()
+            else:
+                node = root
+                while new_node := self.select(node.children, params, self.search_info):
+                    node = new_node
+            
+            leaf = self.expand(node, frontier.push, params, self.search_info)
 
-            leaf = self.expand(self, node)
+            self.search_info["depth_reached"] = max(leaf.depth, self.search_info["depth_reached"])
 
-            value = None
-            if self.should_evaluate(self, leaf):
-                value = self.evaluate(self, leaf.state)
+            value = self.evaluate(leaf.state, params, self.search_info)
 
-            if self.should_backpropagate(self, leaf, value):
-                self.backpropagate(self, leaf, value)
+            while self.should_backpropagate(leaf, value, params, self.search_info):
+                self.backpropagate(leaf, value, params, self.search_info)
+                leaf = leaf.parent
 
-            if self.should_trim(self):
-                self.trim(self)
+        print("Tree:")
+        root.print_tree()
 
-        best_move = self.get_best_move(self)
+        # TODO: consider all children with value equal to the best child
+        best_child = max(
+            root.children, 
+            key=lambda x: self.action_value(x, params, self.search_info)
+        )
+        best_action = best_child.generating_action
 
-        self.search_info["time_spent_ns"] = time.process_time_ns() - self.start_time
+        self.search_info["time_spent_ns"] = time.process_time_ns() - params["start_time"]
 
-        self.frontier.clear()
-        self.memory.clear()
-
-        return best_move, dict(self.search_info)
+        return best_action, dict(self.search_info)
 
     def info(self):
-        lines = (
-            f"\t- {k}: {v.__name__}"
-            for k, v in self.component_functions.function_dict().items()
-        )
-        return repr(self) + "\n" + "\n".join(lines)
+        return f"""{repr(self)}
+    - should_terminate: {self.should_terminate.__name__}
+    - use_frontier: {self.use_frontier.__name__}
+    - frontier: {self.frontier.__name__}
+    - select: {self.select.__name__}
+    - expand: {self.expand.__name__}
+    - evaluate: {self.evaluate.__name__}
+    - should_backpropagate: {self.should_backpropagate.__name__}
+    - backpropagate: {self.backpropagate.__name__}
+    - action_value: {self.action_value.__name__}
+    - params: {self.initial_params}
+"""
 
     def inspect(self):
         # TODO: make component function source code printable
         # via inspect.getsource(func)
         pass
 
-    def to_builder(self):
-        return AgentBuilder(**asdict(self.component_functions))
+    def components(self):
+        return Components(
+            should_terminate=self.should_terminate,
+            use_frontier=self.use_frontier,
+            frontier=self.frontier,
+            select=self.select,
+            expand=self.expand,
+            evaluate=self.evaluate,
+            should_backpropagate=self.should_backpropagate,
+            backpropagate=self.backpropagate,
+            action_value=self.action_value,
+            params=self.initial_params,
+        )

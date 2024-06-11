@@ -7,16 +7,19 @@ These methods should:
     - Not modify node data unrelated to tree structure
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from gts.agents import TreeSearchAgent
+
+from gts.components.frontier import Frontier
 from gts.games.connectfour import ConnectFourState
 from gts.tree import TreeSearchNode
 
+FrontierPushType = Callable[[Frontier, TreeSearchNode], None]
 
 def expand_next(
-    agent: "TreeSearchAgent", node: TreeSearchNode, dfs: bool = False
+    node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict, dfs: bool = False
 ) -> TreeSearchNode:
     """ """
     # do not try to expand terminal states
@@ -28,34 +31,34 @@ def expand_next(
 
     # add node to queue for further expansion if in dfs mode
     if dfs and node.unexpanded_actions:
-        agent.frontier.append(node)
+        push_to_frontier(node)
 
     leaf = node.add_child(state, action)
-    agent.frontier.append(leaf)
+    push_to_frontier(leaf)
 
     # search info update
-    agent.search_info["nodes_expanded"] += 1
+    search_info["nodes_expanded"] += 1
 
     return leaf
 
 
-def expand_next_dfs(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
+def expand_next_dfs(node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict,) -> TreeSearchNode:
     return expand_next(agent, node, dfs=True)
 
 
 def expand_next_depth_limited(
-    agent: "TreeSearchAgent", node: TreeSearchNode, dfs: bool = False
+    node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict, dfs: bool = False
 ) -> TreeSearchNode:
     """ """
     # depth limiting
-    if node.depth == agent.params["depth"]:
+    if node.depth == params["depth_limit"]:
         return node
 
-    return expand_next(agent, node, dfs)
+    return expand_next(node, push_to_frontier, params, search_info, dfs)
 
 
 def expand_next_alpha_beta(
-    agent: "TreeSearchAgent", node: TreeSearchNode
+    node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict,
 ) -> TreeSearchNode:
     """ """
     # alpha beta pruning
@@ -68,15 +71,15 @@ def expand_next_alpha_beta(
             or not node.is_max_node
             and node.children[-1].eval < node.alpha
         ):
-            agent.search_info["ab_prunes"] += 1
+            search_info["ab_prunes"] += 1
 
             node.unexpanded_actions = []  # .clear() not possible for py4j compatibility
             return node
 
-    return expand_next_depth_limited(agent, node, dfs=True)
+    return expand_next_depth_limited(node, push_to_frontier, params, search_info, dfs=True)
 
 
-def expand_next_beam(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
+def expand_next_beam(node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict,) -> TreeSearchNode:
     """ """
     # beam search on root
     if node.parent is None and not node.children:
@@ -127,21 +130,21 @@ def _connectfour_filter_unexpanded_actions(
     return sorted(beam, key=lambda x: -abs(x - node.state.width // 2 + 0.1))
 
 
-def expand_all(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode:
+def expand_all(node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict,) -> TreeSearchNode:
     """ """
     # TODO: Test if necessary
     if node.state.is_terminal:
         return node
 
     # search info update
-    agent.search_info["nodes_expanded"] += len(node.unexpanded_actions)
+    search_info["nodes_expanded"] += len(node.unexpanded_actions)
 
     leaf = None
     while node.unexpanded_actions:
         action = node.unexpanded_actions.pop()
         state = node.state.result(action)
         leaf = node.add_child(state, action)
-        agent.frontier.append(leaf)
+        push_to_frontier(leaf)
 
     assert leaf is not None
     # return last child for evaluate function
@@ -149,10 +152,10 @@ def expand_all(agent: "TreeSearchAgent", node: TreeSearchNode) -> TreeSearchNode
 
 
 def expand_all_depth_limited(
-    agent: "TreeSearchAgent", node: TreeSearchNode
+    node: TreeSearchNode, push_to_frontier: FrontierPushType, params: dict, search_info: dict,
 ) -> TreeSearchNode:
     """ """
-    if node.depth == agent.params["depth"]:
+    if node.depth == params["depth_limit"]:
         return node
 
-    return expand_all(agent, node)
+    return expand_all(node, push_to_frontier, params, search_info)

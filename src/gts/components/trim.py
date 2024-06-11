@@ -7,7 +7,7 @@ These methods should:
     - Possibly modify the search tree and/or the frontier
     - Return nothing
 """
-from gts.components.get_best_move import get_minimax_move
+from gts.components.action_value import get_minimax_move
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

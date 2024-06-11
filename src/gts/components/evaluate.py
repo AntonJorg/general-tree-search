@@ -10,36 +10,31 @@ These methods should:
 import random
 from math import ceil, exp
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from gts.agents.treesearch_agent import TreeSearchAgent
-
 # TODO: Remove dependency on specific games via GGP heuristics
 from gts.games import *
 
 
-def evaluate_utility(agent: "TreeSearchAgent", state: GameState):
+def evaluate_utility(state: GameState, params: dict, search_info: dict):
     if state.is_terminal:
         return state.utility
     else:
         return None
 
 
-def simulate(agent: "TreeSearchAgent", state: GameState):
+def simulate(state: GameState, params: dict, search_info: dict):
     while not state.is_terminal:
         action = random.choice(state.applicable_actions)
         state = state.result(action)
     return state.utility
 
 
-def simulate_many(agent: "TreeSearchAgent", state: GameState):
-    n = agent.params["num_simulations"]
-    values = (simulate(agent, state) for _ in range(n))
+def simulate_many(state: GameState, params: dict, search_info: dict):
+    n = params["num_simulations"]
+    values = (simulate(state, params) for _ in range(n))
     return sum(values) / n
 
 
-def simulate_stochastic_environment(agent: "TreeSearchAgent", state: GameState):
+def simulate_stochastic_environment(state: GameState, params: dict, search_info: dict):
     while not state.is_terminal:
         if hasattr(state, "cumulative_distribution"):
             action = random.choices(
@@ -53,23 +48,23 @@ def simulate_stochastic_environment(agent: "TreeSearchAgent", state: GameState):
     return state.utility
 
 
-def static_evaluation(agent: "TreeSearchAgent", state: GameState):
+def static_evaluation(state: GameState, params: dict, search_info: dict):
     match state:
         case ConnectFourState():
-            return _static_eval_connectfour(agent, state)
+            return _static_eval_connectfour(state, params, search_info)
         case NimState():
-            return _static_eval_nim(agent, state)
+            return _static_eval_nim(state, params, search_info)
         case GGPState():
-            return _static_eval_ggp(agent, state)
+            return _static_eval_ggp(state, params, search_info)
         case Twenty48State():
-            return _static_eval_2048(agent, state)
+            return _static_eval_2048(state, params, search_info)
         case DummyState():
-            return _static_eval_dummy(agent, state)
+            return _static_eval_dummy(state, params, search_info)
         case _:
             raise ValueError(f"Unknown state type: {type(state)}")
 
 
-def _static_eval_connectfour(agent: "TreeSearchAgent", state: ConnectFourState):
+def _static_eval_connectfour(state: ConnectFourState, params: dict, search_info: dict):
     if state.is_terminal:
         return state.utility
 
@@ -124,7 +119,7 @@ def _static_eval_connectfour(agent: "TreeSearchAgent", state: ConnectFourState):
     return 1 / (1 + exp(-score))
 
 
-def _static_eval_nim(agent: "TreeSearchAgent", state: NimState):
+def _static_eval_nim(state: NimState, params: dict, search_info: dict):
     if state.is_terminal:
         return state.utility
 
@@ -138,19 +133,19 @@ def _static_eval_nim(agent: "TreeSearchAgent", state: NimState):
     return int(bool(result))
 
 
-def _static_eval_ggp(agent: "TreeSearchAgent", state: GGPState):
+def _static_eval_ggp(state: GGPState, params: dict, search_info: dict):
     return state.utility
 
 
-def _static_eval_2048(agent: "TreeSearchAgent", state: Twenty48State):
+def _static_eval_2048(state: Twenty48State, params: dict, search_info: dict):
     return state.utility
 
 
-def _static_eval_dummy(agent: "TreeSearchAgent", state: DummyState):
+def _static_eval_dummy(state: DummyState, params: dict, search_info: dict):
     if state.utility is None:
         return 0.0
     return state.utility
 
 
-def evaluate_and_simulate(agent: "TreeSearchAgent", state: GameState):
-    return static_evaluation(agent, state), simulate(agent, state)
+def evaluate_and_simulate(state: GameState, params: dict, search_info: dict):
+    return static_evaluation(state, params, search_info), simulate(state, params, search_info)
