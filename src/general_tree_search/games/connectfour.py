@@ -154,5 +154,9 @@ class ConnectFourState:
         """
         state = self
         for char in action_string:
+            if state.is_terminal:
+                raise ValueError("Cannot advance from terminal state")
+            if int(char) not in state.applicable_actions:
+                raise ValueError("Invalid action")
             state = state.result(int(char))
         return state

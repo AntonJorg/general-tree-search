@@ -1,7 +1,6 @@
 import time
 import raylibpy as rl
 from abc import ABC, abstractmethod
-from types import MethodType
 from typing import Callable, Any
 from collections import defaultdict
 from dataclasses import dataclass, asdict
@@ -10,7 +9,7 @@ from general_tree_search.search_tree import (
     get_parent,
     get_children,
     set_values,
-    expand_one,
+    single_expand,
 )
 from general_tree_search.games import GameState
 
@@ -20,10 +19,9 @@ type Value = dict
 type ShouldTerminate = Callable[[TreeSearchAgent, Node], bool]
 type ShouldSelect = Callable[[TreeSearchAgent, Node], bool]
 type Choose = Callable[[TreeSearchAgent, list[Node]], Node]
-type ShouldEvaluate = Callable[[TreeSearchAgent, Node], bool]
 type Evaluate = Callable[[TreeSearchAgent, GameState], Value]
 type Update = Callable[[TreeSearchAgent, list[Node]], Value]
-type ActionValue = Callable[[TreeSearchAgent, list[Node]], Value]
+type GetSolution = Callable[[TreeSearchAgent, Node], Any]
 
 
 @dataclass
@@ -33,7 +31,7 @@ class AgentDefinition:
     choose: Choose
     evaluate: Evaluate
     update: Update
-    actionvalue: ActionValue
+    get_solution: GetSolution
 
     def to_agent_type(self, name: str):
         cls = type(name, (TreeSearchAgent,), {})
@@ -67,6 +65,10 @@ class TreeSearchAgent(ABC):
             rl.init_window(plot_settings.width, plot_settings.height, "Tree Search")
 
         while not self.should_terminate(root):
+            iterations += 1
+            time.sleep(0)
+            # print(root.to_tree_string())
+
             node = self.select(root)
             child = self.expand(node)
 
@@ -89,13 +91,12 @@ class TreeSearchAgent(ABC):
 
     def select(self, node: Node) -> Node:
         while self.should_select(node) and not node.state.is_terminal:
-            children = get_children(node)
-            node = self.choose(node, children)
+            node = self.choose(node, get_children(node))
 
         return node
 
     def expand(self, node: Node) -> Node:
-        child = expand_one(node)
+        child = single_expand(node)
         self.search_stats["expansions"] += 1
 
         return child
@@ -103,8 +104,7 @@ class TreeSearchAgent(ABC):
     def backpropagate(self, node: Node):
         while (node := get_parent(node)) is not None:
             children = get_children(node)
-            values = self.update(node, children)
-            set_values(node, values)
+            node.values = self.update(node, children)
 
     def plot_tree(self, root: Node, plot_settings):
         width = plot_settings.width
@@ -165,6 +165,10 @@ class TreeSearchAgent(ABC):
 
     @abstractmethod
     def update(self):
+        pass
+
+    @abstractmethod
+    def get_solution(self):
         pass
 
 

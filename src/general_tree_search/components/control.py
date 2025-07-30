@@ -18,5 +18,5 @@ def budget_termination(expansion_budget: float):
     return _budget_termination
 
 
-def if_fully_expanded(agent: TreeSearchAgent, child: Node):
-    return not child.unexpanded_actions
+def if_fully_expanded(agent: TreeSearchAgent, node: Node):
+    return node.is_fully_expanded()
