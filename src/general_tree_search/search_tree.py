@@ -3,7 +3,12 @@ from general_tree_search.games import GameState
 
 
 class Node[T]:
-    """ """
+    """
+    Implementation of a search tree (Definition 3).
+
+    For clarity, the state, action, and value functions (s(n), a(n, m), and v(n))
+    are implemented as simple instance variables, not separate getter functions.
+    """
 
     def __init__(
         self,
@@ -42,20 +47,16 @@ class Node[T]:
         return string
 
 
-def get_parent[T](node: Node[T]) -> Node[T] | None:
+def parent[T](node: Node[T]) -> Node[T] | None:
     return node._parent
 
 
-def get_children[T](node: Node[T]) -> list[Node[T]]:
+def children[T](node: Node[T]) -> list[Node[T]]:
     return node._children
 
 
-def set_values[T](node: Node[T], values: dict[str]) -> None:
-    node.values = values
-
-
 def single_expand[T](node: Node[T]) -> Node[T]:
-    if not node.unexpanded_actions:
+    if node.state.is_terminal or not node.unexpanded_actions:
         return node
     action = node.unexpanded_actions.pop()
     state = node.state.result(action)

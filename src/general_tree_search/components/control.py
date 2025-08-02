@@ -6,7 +6,10 @@ from general_tree_search.search_tree import Node
 
 def timed_termination(time_budget: float):
     def _timed_termination(agent: TreeSearchAgent, root: Node):
-        return time.time() - agent.search_stats["start_time"] > time_budget
+        return (
+            time.process_time_ns() - agent.search_stats["start_time"]
+            > time_budget * 1_000_000_000
+        )
 
     return _timed_termination
 

@@ -1,14 +1,12 @@
 import time
-import raylibpy as rl
 from abc import ABC, abstractmethod
 from typing import Callable, Any
 from collections import defaultdict
 from dataclasses import dataclass, asdict
 from general_tree_search.search_tree import (
     Node,
-    get_parent,
-    get_children,
-    set_values,
+    parent,
+    children,
     single_expand,
 )
 from general_tree_search.games import GameState
@@ -20,18 +18,20 @@ type ShouldTerminate = Callable[[TreeSearchAgent, Node], bool]
 type ShouldSelect = Callable[[TreeSearchAgent, Node], bool]
 type Choose = Callable[[TreeSearchAgent, list[Node]], Node]
 type Evaluate = Callable[[TreeSearchAgent, GameState], Value]
-type Update = Callable[[TreeSearchAgent, list[Node]], Value]
-type GetSolution = Callable[[TreeSearchAgent, Node], Any]
+type Update = Callable[[TreeSearchAgent, Node, list[Node]], Value]
+type ExtractSolution = Callable[[TreeSearchAgent, Node], Any]
 
 
 @dataclass
 class AgentDefinition:
+    """ """
+
     should_terminate: ShouldTerminate
     should_select: ShouldSelect
     choose: Choose
     evaluate: Evaluate
     update: Update
-    get_solution: GetSolution
+    get_solution: ExtractSolution
 
     def to_agent_type(self, name: str):
         cls = type(name, (TreeSearchAgent,), {})
@@ -49,103 +49,64 @@ class AgentDefinition:
 
 
 class TreeSearchAgent(ABC):
+    """ """
+
     def __init__(self):
         self.search_stats = defaultdict(float)
 
     def search(self, state: GameState, delay=0.0, plot_settings=None):
+        """
+        Algorithm 1.
+        """
         assert not state.is_terminal, "Cannot search terminal states!"
 
+        # initialize search tree
         root = Node(state, parent=None, generating_action=None)
 
         iterations = 0
         self.search_stats.clear()
-        self.search_stats["start_time"] = time.time()
-        if plot_settings is not None:
-            rl.set_trace_log_level(rl.RL_LOG_ERROR)
-            rl.init_window(plot_settings.width, plot_settings.height, "Tree Search")
+        self.search_stats["start_time"] = time.process_time_ns()
 
+        # iterate until termination condition is met
         while not self.should_terminate(root):
             iterations += 1
-            time.sleep(0)
-            # print(root.to_tree_string())
 
+            if delay:
+                time.sleep(delay)
+                print(root.to_tree_string())
+
+            # forward pass through the search tree
             node = self.select(root)
-            child = self.expand(node)
+            # expand leaf node
+            child = single_expand(node)
 
-            values = self.evaluate(child)
-            set_values(child, values)
-            self.backpropagate(child)
+            # evaluate leaf node
+            child.values = self.evaluate(child)
+            # backpropagate through search tree
+            self.backpropagate(node)
 
-            if (
-                plot_settings is not None
-                and iterations % plot_settings.iters_per_render == 0
-            ):
-                self.plot_tree(root, plot_settings)
+        self.search_stats["end_time"] = time.process_time_ns()
+        self.search_stats["iterations"] = iterations
 
-        self.search_stats["end_time"] = time.time()
-
-        if plot_settings is not None:
-            rl.close_window()
-
+        # return search tree
         return root
 
     def select(self, node: Node) -> Node:
+        """
+        Algorithm 2.
+        """
         while self.should_select(node) and not node.state.is_terminal:
-            node = self.choose(node, get_children(node))
+            node = self.choose(node, children(node))
 
         return node
 
-    def expand(self, node: Node) -> Node:
-        child = single_expand(node)
-        self.search_stats["expansions"] += 1
-
-        return child
-
     def backpropagate(self, node: Node):
-        while (node := get_parent(node)) is not None:
-            children = get_children(node)
-            node.values = self.update(node, children)
-
-    def plot_tree(self, root: Node, plot_settings):
-        width = plot_settings.width
-        height = plot_settings.height
-
-        def plot_node(node: Node, width, start_x, start_y):
-            row_height = height * (1 - 0.8 ** (node.depth + 1)) - start_y
-
-            u = plot_settings.get_utility(node.values)
-
-            r = round(255 * max(min(1, 2 - 2 * u), 0))
-            g = round(255 * max(min(1, 2 * u), 0))
-
-            rl.draw_rectangle(
-                start_x + 1,
-                start_y + 1,
-                width - 2,
-                row_height - 2,
-                (r, g, 0, 255),
-            )
-
-            if not node._children:
-                return
-
-            total_count = sum(plot_settings.get_width(c.values) for c in node._children)
-
-            child_x = start_x
-            for c in node._children:
-                child_width = width * plot_settings.get_width(c.values) / total_count
-                if width < 3:
-                    return
-                plot_node(c, child_width, child_x, start_y + row_height)
-                child_x += child_width
-
-        rl.begin_drawing()
-        rl.clear_background(rl.RAYWHITE)
-
-        plot_node(root, width, 0, 0)
-
-        rl.end_drawing()
-        time.sleep(plot_settings.delay)
+        """
+        Algorithm 3.
+        """
+        while node is not None:
+            node.values = self.update(node, children(node))
+            node = parent(node)
 
     @abstractmethod
     def should_terminate(self):
@@ -170,13 +131,3 @@ class TreeSearchAgent(ABC):
     @abstractmethod
     def get_solution(self):
         pass
-
-
-@dataclass
-class PlotSettings:
-    delay: float
-    iters_per_render: int
-    width: int
-    height: int
-    get_utility: Callable
-    get_width: Callable

@@ -1,3 +1,6 @@
+import time
+
+
 class ConnectFourState:
     """
     Represents the Connect 4 board as two binary numbers; the piece mask
@@ -26,12 +29,16 @@ class ConnectFourState:
 
     type Action = int
 
+    BOTTOM_MASK = 0b0000001_0000001_0000001_0000001_0000001_0000001_0000001
+    BOARD_MASK = 0b0111111_0111111_0111111_0111111_0111111_0111111_0111111
+
     def __init__(
         self,
         piece_mask=0,
         player_mask=0,
         moves=0,
         action_sequence="",
+        result_delay=0,
     ):
         self.width = 7
         self.height = 6
@@ -41,6 +48,8 @@ class ConnectFourState:
 
         self.moves = moves
         self.action_sequence = action_sequence
+
+        self.result_delay = result_delay
 
         self.applicable_actions = self._init_applicable_actions()
         self.utility = self._init_utility()
@@ -78,7 +87,7 @@ class ConnectFourState:
         The set A(s).
 
         Returns the actions that are applicable in the current
-        state, ie. the actions corresponding to non-full rows.
+        state, ie. the actions corresponding to non-full columns.
         Sorted from the middle out, examples:
 
         Unsorted:          Return value
@@ -92,14 +101,15 @@ class ConnectFourState:
 
     def _init_utility(self) -> float:
         """
-        The utility function U: S^o -> R.
+        The utility function U: S_T -> V. Note that the utility is always given
+        from the Max players perspective.
 
         Returns the utility of terminal states according to the
         following cases:
 
-            Player 1 win: 1.0
-            Player 2 win: 0.0
-            Draw        : 0.5
+            Max win: 1.0
+            Min win: 0.0
+            Draw   : 0.5
 
         Even though the utility function is theoretically
         only defined on terminal states, this implementation does not
@@ -124,27 +134,68 @@ class ConnectFourState:
 
     def _init_is_terminal(self) -> bool:
         """
-        Whether s is a member of S^o
+        Whether s is a member of S_T.
 
         Return True in terminal states, false otherwise.
         A state is terminal if there is a winner, or there are no applicable actions.
         """
         return not self.applicable_actions or self.utility != 0.5
 
+    def _possible(self):
+        """Mask of possible locations for stones dropped at next move."""
+        return (self.piece_mask + self.BOTTOM_MASK) & self.BOARD_MASK
+
+    def _winning_positions(self, position) -> int:
+        H = self.height
+
+        r = (position << 1) & (position << 2) & (position << 3)
+
+        p = (position << (H + 1)) & (position << 2 * (H + 1))
+        r |= p & (position << 3 * (H + 1))
+        r |= p & (position >> (H + 1))
+        p >>= 3 * (H + 1)
+        r |= p & (position << (H + 1))
+        r |= p & (position >> 3 * (H + 1))
+
+        p = (position << H) & (position << 2 * H)
+        r |= p & (position << 3 * H)
+        r |= p & (position >> H)
+        p >>= 3 * H
+        r |= p & (position << H)
+        r |= p & (position >> 3 * H)
+
+        p = (position << (H + 2)) & (position << 2 * (H + 2))
+        r |= p & (position << 3 * (H + 2))
+        r |= p & (position >> (H + 2))
+        p >>= 3 * (H + 2)
+        r |= p & (position << (H + 2))
+        r |= p & (position >> 3 * (H + 2))
+
+        return r & (self.BOARD_MASK ^ self.piece_mask)
+
     def result(self, action: Action) -> "ConnectFourState":
         """
-        The result function R: S x A -> S
+        The result function $\gamma: S \times A \to S$
+
+        Includes the option of inducing an artificial delay, to simulate
+        more computationally expensive domains.
+
+        To introduce the delay, pass `result_delay` when constructing the initial state.
         """
         player_mask = self.player_mask ^ self.piece_mask
         piece_mask = self.piece_mask | self.piece_mask + (
             1 << action * (self.height + 1)
         )
 
+        if self.result_delay:
+            time.sleep(self.result_delay)
+
         return ConnectFourState(
             piece_mask,
             player_mask,
             self.moves + 1,
             self.action_sequence + str(action),
+            self.result_delay,
         )
 
     def apply_many(self, action_string: str) -> "ConnectFourState":
