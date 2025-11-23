@@ -24,7 +24,12 @@ type ExtractSolution = Callable[[TreeSearchAgent, Node], Any]
 
 @dataclass
 class AgentDefinition:
-    """ """
+    """
+    Helper class for creating agent classes at runtime. Note that it takes 6 functions,
+    instead of the 5 from the article. This is because we include `get_solution`
+    here, which is not part of the 5 component functions, and only used after
+    the GTS algorithm has completed.
+    """
 
     should_terminate: ShouldTerminate
     should_select: ShouldSelect
@@ -49,14 +54,16 @@ class AgentDefinition:
 
 
 class TreeSearchAgent(ABC):
-    """ """
+    """
+    Game playing agent implementing the General Tree Search (GTS) algorithm.
+    """
 
     def __init__(self):
         self.search_stats = defaultdict(float)
 
     def search(self, state: GameState, delay=0.0, plot_settings=None):
         """
-        Algorithm 1.
+        Algorithm 1: General Tree Search (GTS)
         """
         assert not state.is_terminal, "Cannot search terminal states!"
 
@@ -72,17 +79,19 @@ class TreeSearchAgent(ABC):
             iterations += 1
 
             if delay:
-                time.sleep(delay)
+                start = time.process_time()
+                while time.process_time() - start < delay:
+                    pass
                 print(root.to_tree_string())
 
-            # forward pass through the search tree
+            # forward pass through the search tree (alg. 2)
             node = self.select(root)
             # expand leaf node
             child = single_expand(node)
 
             # evaluate leaf node
             child.values = self.evaluate(child)
-            # backpropagate through search tree
+            # backpropagate through search tree (alg. 3)
             self.backpropagate(node)
 
         self.search_stats["end_time"] = time.process_time_ns()
@@ -93,7 +102,7 @@ class TreeSearchAgent(ABC):
 
     def select(self, node: Node) -> Node:
         """
-        Algorithm 2.
+        Algorithm 2: Selection step
         """
         while self.should_select(node) and not node.state.is_terminal:
             node = self.choose(node, children(node))
@@ -102,7 +111,7 @@ class TreeSearchAgent(ABC):
 
     def backpropagate(self, node: Node):
         """
-        Algorithm 3.
+        Algorithm 3: Backpropagation step
         """
         while node is not None:
             node.values = self.update(node, children(node))

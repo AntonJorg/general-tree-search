@@ -8,18 +8,11 @@ from pathlib import Path
 
 import matplotlib as mpl
 
-# mpl.rcParams.update(
-#    {
-#        "text.usetex": True,
-#        "font.family": "serif",  # Use LaTeX's serif font (Computer Modern)
-#        "font.serif": ["Computer Modern Roman"],
-#        "text.latex.preamble": r"\usepackage{amsmath}",  # Optional
-#    }
-# )
 
 plt.rcParams.update(
     {
         "font.family": "serif",
+        "font.size": 26,
         # "font.weight": "bold",
         # "axes.labelweight": "bold",
         "mathtext.fontset": "cm",
@@ -27,10 +20,14 @@ plt.rcParams.update(
     }
 )
 
+TITLE = "Connect 4 (Result delay = 0.0005 sec)"
+
 
 # Load and parse the file
 folder = Path("results/raw")
 newest_file = max(folder.glob("*"), key=os.path.getmtime)
+
+newest_file = "results/raw/expensive_result-final.txt"
 
 with open(newest_file, "r") as f:
     lines = [ast.literal_eval(line.strip()) for line in f if line.strip()]
@@ -75,32 +72,40 @@ for count_entry in agent_counts:
         arr = np.array([float(x) for x in v.split(",")])
         count_dict[k] = arr
 
-plt.rcParams.update({"font.size": 20})
 
 # Plot: Barchart + line plot
-fig, axs = plt.subplots(2, 1, figsize=(12, 12))
+fig, axs = plt.subplots(2, 1, figsize=(16, 12))
 
 # Bar chart: overall winrate
-axs[0].set_title("Overall Winrate per Agent")
+axs[0].set_title("Average utility over pairwise matchups")
 axs[0].barh(
     range(n_agents),
     sorted_winrates,
-    xerr=[0.1 for _ in range(n_agents)],
-    capsize=2,
+    # xerr=[0.1 for _ in range(n_agents)],
+    # capsize=2,
     color="gray",
 )
 axs[0].set_yticks(range(n_agents))
 axs[0].set_yticklabels(
     [agent.replace("Agent", "") for agent in sorted_agents], rotation=45
 )
-axs[0].set_xlabel("Average Winrate")
+axs[0].set_xlabel("Average Utility")
 axs[0].set_xlim(0, 1)
 xticks = [0, 0.25, 0.5, 0.75, 1]
 axs[0].set_xticks(xticks, xticks)
 axs[0].axvline(0.5, linestyle="--", color="black")
 
 linestyles = iter(
-    ["dashed", "dotted", "dashdot", "solid", "solid", "solid", "solid", "solid"]
+    [
+        "dashed",
+        "dotted",
+        "dashdot",
+        (0, (8, 3)),
+        "solid",
+        "solid",
+        "solid",
+        "solid",
+    ]
 )
 
 # Line chart: count evolution
@@ -126,6 +131,8 @@ axs[1].legend(by_label.values(), by_label.keys(), loc="upper left")
 axs[1].set_xlabel("Rounds")
 axs[1].set_xlim(0, len(counts))
 axs[1].set_ylabel("Selection Count")
+
+plt.suptitle(TITLE)
 
 plt.tight_layout()
 plt.savefig(f"results/processed/{experiment}-results.pdf", bbox_inches="tight")

@@ -12,6 +12,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "matplotlib>=3.10.1",
     "networkx>=3.4.2",
+    "open-spiel>=1.6.9",
     "pandas>=2.3.1",
     "py4j>=0.10.9.9",
     "pygraphviz>=1.14",

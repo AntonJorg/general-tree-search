@@ -39,9 +39,11 @@ class ConnectFourState:
         moves=0,
         action_sequence="",
         result_delay=0,
+        width=7,
+        height=6,
     ):
-        self.width = 7
-        self.height = 6
+        self.width = width
+        self.height = height
 
         self.piece_mask = piece_mask
         self.player_mask = player_mask
@@ -175,7 +177,7 @@ class ConnectFourState:
 
     def result(self, action: Action) -> "ConnectFourState":
         """
-        The result function $\gamma: S \times A \to S$
+        The result function $\\gamma: S \\times A \\to S$
 
         Includes the option of inducing an artificial delay, to simulate
         more computationally expensive domains.
@@ -188,7 +190,9 @@ class ConnectFourState:
         )
 
         if self.result_delay:
-            time.sleep(self.result_delay)
+            start = time.process_time()
+            while time.process_time() - start < self.result_delay:
+                pass
 
         return ConnectFourState(
             piece_mask,

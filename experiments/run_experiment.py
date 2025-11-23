@@ -16,16 +16,16 @@ N_SEARCH_GAMES = 250
 agents = get_agents(SEARCH_TIME)
 
 # base, expensive_result, tall_board
-EXPERIMENT = "base"
+EXPERIMENT = "expensive_result"
 
-WORKER_COUNT = os.cpu_count() // 2 + 2
+WORKER_COUNT = os.cpu_count()
 
 
 def get_initial_state():
     if EXPERIMENT == "base":
         return ConnectFourState()
     if EXPERIMENT == "expensive_result":
-        return ConnectFourState(result_delay=1e-3)
+        return ConnectFourState(result_delay=0.5e-3)
     if EXPERIMENT == "tall_board":
         raise ValueError("TODO")
     raise ValueError(f"Option {EXPERIMENT=} not supported")
