@@ -12,7 +12,6 @@ class PySpielState:
 
         # ugly hack to prevent max history lenght crashes
         if moves >= state.get_game().max_history_length():
-            print(f"MAX GAME DEPTH REACHED: {self}", file=sys.stderr, flush=True)
             self.applicable_actions = []
             self.is_terminal = True
             self.utility = 0.5
