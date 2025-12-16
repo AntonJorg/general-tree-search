@@ -116,7 +116,6 @@ dependencies = [
     { name = "open-spiel" },
     { name = "pandas" },
     { name = "py4j" },
-    { name = "pygraphviz" },
     { name = "pyqt5" },
     { name = "seaborn" },
     { name = "tqdm" },
@@ -131,7 +130,6 @@ requires-dist = [
     { name = "open-spiel", specifier = ">=1.6.9" },
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "py4j", specifier = ">=0.10.9.9" },
-    { name = "pygraphviz", specifier = ">=1.14" },
     { name = "pyqt5", specifier = ">=5.15.11" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -469,12 +467,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/38/31/0b210511177070c8d
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/db/ea0203e495be491c85af87b66e37acfd3bf756fd985f87e46fc5e3bf022c/py4j-0.10.9.9-py2.py3-none-any.whl", hash = "sha256:c7c26e4158defb37b0bb124933163641a2ff6e3a3913f7811b0ddbe07ed61533", size = 203008, upload-time = "2025-01-15T03:53:15.648Z" },
 ]
-
-[[package]]
-name = "pygraphviz"
-version = "1.14"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/66/ca/823d5c74a73d6b8b08e1f5aea12468ef334f0732c65cbb18df2a7f285c87/pygraphviz-1.14.tar.gz", hash = "sha256:c10df02377f4e39b00ae17c862f4ee7e5767317f1c6b2dfd04cea6acc7fc2bea", size = 106003, upload-time = "2024-09-29T18:31:12.471Z" }
 
 [[package]]
 name = "pyparsing"
