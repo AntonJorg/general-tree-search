@@ -1,7 +1,7 @@
 import sys
 import argparse
 from multiprocessing import Pool
-
+from collections import defaultdict
 
 from agents import get_agents
 from games import get_game_names, get_initial_state
@@ -29,6 +29,13 @@ parser.add_argument(
     default=1,
     help="Number of worker processes",
 )
+parser.add_argument(
+    "-c",
+    "--continue_from",
+    type=str,
+    default=None,
+    help="Output file to continue from",
+)
 
 args = parser.parse_args()
 
@@ -36,13 +43,33 @@ args = parser.parse_args()
 agent_dict = get_agents(args.search_time)
 game_names = get_game_names()
 
+    
+games_played = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+if args.continue_from is not None:
+
+    with open(args.continue_from, "r") as f:
+        data = f.read()
+        data = data.splitlines()
+
+
+    for line in data:
+        game, a1, a2, _ = line.split()
+        games_played[a1][a2][game] += 1
+
 
 def work_generator():
-    idx = 0
+    idx = sum(
+        v
+        for d2 in games_played.values()
+        for d1 in d2.values()
+        for v in d1.values()
+    ) 
     for agent1_name in agent_dict:
         for agent2_name in agent_dict:
             for game_str in game_names:
-                for _ in range(args.n_games):
+                while games_played[agent1_name][agent2_name][game_str] < args.n_games:
+                    games_played[agent1_name][agent2_name][game_str] += 1
                     idx += 1
                     yield (idx, game_str, agent1_name, agent2_name)
 

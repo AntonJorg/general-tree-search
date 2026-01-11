@@ -45,11 +45,15 @@ game_totals = defaultdict(float)
 game_counts = defaultdict(int)
 
 
+test = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
 for line in data:
     game, a1, a2, u = line.split()
     #if a1 == a2:
     #    continue
     u = float(u)
+
+    test[a1][a2][game] += 1
 
     totals[game][a1][a2] += u
     counts[game][a1][a2] += 1
@@ -105,7 +109,7 @@ def save_bar(d: dict, out_dir: Path, name: str, *, percent=True):
     if percent:
         vals *= 100.0
 
-    fig, ax = plt.subplots(figsize=(max(6, 0.6 * len(labels)), 4))
+    fig, ax = plt.subplots(figsize=(16, 8))
     ax.bar(labels, vals)
     ax.set_title(name)
     ax.set_ylabel("Percent" if percent else "Value")
@@ -127,27 +131,42 @@ def save_heatmap(dd: dict, out_dir: Path, name: str, xlabel, ylabel, *, percent=
 
     df_plot = df * 100.0 if percent else df
 
-    fig, ax = plt.subplots(
-        figsize=(max(6, 0.7 * len(df_plot.columns)), max(4, 0.5 * len(df_plot.index)))
-    )
+    fig, ax = plt.subplots()
     sns.heatmap(
         df_plot,
         ax=ax,
-        cmap="viridis",
+        cmap="grey",
         annot=True,
         fmt=".1f" if percent else ".3g",
         linewidths=0.5,
-        linecolor="white",
+        linecolor="black",
+        linestyle="--",
+        vmin=0,
+        vmax=100,
+        square=True,
     )
     ax.set_title(name)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    #ax.set_aspect("equal", adjustable="box")
     fig.tight_layout()
 
     path = out_dir / f"{name}.png"
     fig.savefig(path, dpi=200)
     plt.close(fig)
     return path
+
+
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        #"font.size": 26,
+        # "font.weight": "bold",
+        # "axes.labelweight": "bold",
+        "mathtext.fontset": "cm",
+        "mathtext.default": "regular",
+    }
+)
 
 save_bar(agent_avg, out_dir, "Average utility per agent", percent=True)
 save_heatmap(per_game_avg, out_dir, "per_game_averages_heatmap", "Agent", "Game", percent=True)
